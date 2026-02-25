@@ -32,10 +32,10 @@ _toggle_on = False
 _color_name = "gray"
 _registered_action_ids: set[str] = set()
 
-ACTION_ON = "edmc_hotkeys_test.on"
-ACTION_OFF = "edmc_hotkeys_test.off"
-ACTION_TOGGLE = "edmc_hotkeys_test.toggle"
-ACTION_COLOR = "edmc_hotkeys_test.color"
+ACTION_ON = "On"
+ACTION_OFF = "Off"
+ACTION_TOGGLE = "Toggle"
+ACTION_COLOR = "Color"
 LEGEND_TEXT = (
     "Legend (Hotkey -> Action)\n"
     "Ctrl+Shift+F1 -> On\n"
