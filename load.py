@@ -31,28 +31,41 @@ _power_on = False
 _toggle_on = False
 _color_name = "gray"
 _registered_action_ids: set[str] = set()
+_action_hotkeys: dict[tuple[str, Optional[str]], str] = {}
 
 ACTION_ON = "On"
 ACTION_OFF = "Off"
 ACTION_TOGGLE = "Toggle"
 ACTION_COLOR = "Color"
-LEGEND_TEXT = (
-    "Legend (Hotkey -> Action)\n"
-    "Ctrl+Shift+F1 -> On\n"
-    "Ctrl+Shift+F2 -> Off\n"
-    "Ctrl+Shift+F3 -> Toggle\n"
-    "Ctrl+Shift+F4 -> Color Red\n"
-    "Ctrl+Shift+F5 -> Color Lime\n"
-    "Ctrl+Shift+F6 -> Color DeepSkyBlue"
-)
+LEGEND_HEADER = "Legend (Hotkey -> Action)"
+LEGEND_UNKNOWN = "Unconfirmed"
+COLOR_LEGEND_ITEMS = [
+    ("red", "Color Red"),
+    ("lime", "Color Lime"),
+    ("deepskyblue", "Color DeepSkyBlue"),
+]
+LEGEND_ITEMS: list[tuple[tuple[str, Optional[str]], str]] = [
+    ((ACTION_ON, None), "On"),
+    ((ACTION_OFF, None), "Off"),
+    ((ACTION_TOGGLE, None), "Toggle"),
+    *[((ACTION_COLOR, color), label) for color, label in COLOR_LEGEND_ITEMS],
+]
 
 
 class _UiState:
-    def __init__(self, frame: tk.Frame, power_button: tk.Button, toggle_button: tk.Button, color_block: tk.Label):
+    def __init__(
+        self,
+        frame: tk.Frame,
+        power_button: tk.Button,
+        toggle_button: tk.Button,
+        color_block: tk.Label,
+        legend_var: tk.StringVar,
+    ):
         self.frame = frame
         self.power_button = power_button
         self.toggle_button = toggle_button
         self.color_block = color_block
+        self.legend_var = legend_var
 
 
 _ui: Optional[_UiState] = None
@@ -68,6 +81,7 @@ def plugin_stop() -> None:
     global _ui
     _ui = None
     _registered_action_ids.clear()
+    _action_hotkeys.clear()
 
 
 def plugin_app(parent: tk.Widget) -> tk.Frame:
@@ -89,7 +103,8 @@ def plugin_app(parent: tk.Widget) -> tk.Frame:
     color_block = tk.Label(frame, text="", width=16, height=2, relief=tk.SUNKEN, bd=1)
     color_block.grid(row=3, column=0, sticky="w", padx=6, pady=(4, 6))
 
-    legend_label = ttk.Label(frame, text=LEGEND_TEXT, justify=tk.LEFT)
+    legend_var = tk.StringVar(value=_build_legend_text())
+    legend_label = ttk.Label(frame, textvariable=legend_var, justify=tk.LEFT)
     legend_label.grid(row=1, column=1, rowspan=4, sticky="nw", padx=(16, 6), pady=2)
 
     _ui = _UiState(
@@ -97,6 +112,7 @@ def plugin_app(parent: tk.Widget) -> tk.Frame:
         power_button=power_button,
         toggle_button=toggle_button,
         color_block=color_block,
+        legend_var=legend_var,
     )
     _apply_ui_state()
     _register_hotkey_actions()
@@ -169,6 +185,34 @@ def _apply_ui_state() -> None:
     except tk.TclError:
         logger.warning("Invalid color '%s'; using gray", _color_name)
         _ui.color_block.configure(bg="gray")
+
+    _apply_legend_state()
+
+
+def _apply_legend_state() -> None:
+    if _ui is None:
+        return
+    _ui.legend_var.set(_build_legend_text())
+
+
+def _build_legend_text() -> str:
+    lines = [LEGEND_HEADER]
+    for key, label in LEGEND_ITEMS:
+        hotkey = _action_hotkeys.get(key, LEGEND_UNKNOWN)
+        lines.append(f"{hotkey} -> {label}")
+    return "\n".join(lines)
+
+
+def _record_hotkey(*, action_id: str, color_name: Optional[str], hotkey: Optional[str]) -> None:
+    if hotkey is None:
+        return
+    key = (action_id, _normalize_color_key(color_name) if color_name else None)
+    _action_hotkeys[key] = hotkey
+    _apply_legend_state()
+
+
+def _normalize_color_key(color_name: str) -> str:
+    return str(color_name).strip().casefold()
 
 
 def _register_hotkey_actions() -> None:
@@ -244,22 +288,45 @@ def _build_actions(action_type: Any) -> list[Any]:
     ]
 
 
-def _action_turn_on(*, payload: Optional[dict[str, Any]] = None, source: str = "hotkey") -> None:
+def _action_turn_on(
+    *,
+    payload: Optional[dict[str, Any]] = None,
+    source: str = "hotkey",
+    hotkey: Optional[str] = None,
+) -> None:
     del payload, source
+    _record_hotkey(action_id=ACTION_ON, color_name=None, hotkey=hotkey)
     _set_power(True)
 
 
-def _action_turn_off(*, payload: Optional[dict[str, Any]] = None, source: str = "hotkey") -> None:
+def _action_turn_off(
+    *,
+    payload: Optional[dict[str, Any]] = None,
+    source: str = "hotkey",
+    hotkey: Optional[str] = None,
+) -> None:
     del payload, source
+    _record_hotkey(action_id=ACTION_OFF, color_name=None, hotkey=hotkey)
     _set_power(False)
 
 
-def _action_toggle(*, payload: Optional[dict[str, Any]] = None, source: str = "hotkey") -> None:
+def _action_toggle(
+    *,
+    payload: Optional[dict[str, Any]] = None,
+    source: str = "hotkey",
+    hotkey: Optional[str] = None,
+) -> None:
     del payload, source
+    _record_hotkey(action_id=ACTION_TOGGLE, color_name=None, hotkey=hotkey)
     _set_toggle(not _toggle_on)
 
 
-def _action_change_color(*, payload: Optional[dict[str, Any]] = None, source: str = "hotkey") -> None:
+def _action_change_color(
+    *,
+    payload: Optional[dict[str, Any]] = None,
+    source: str = "hotkey",
+    hotkey: Optional[str] = None,
+) -> None:
     del source
     if not isinstance(payload, dict):
         logger.warning("Color action requires payload with a 'color' string")
@@ -270,4 +337,5 @@ def _action_change_color(*, payload: Optional[dict[str, Any]] = None, source: st
         logger.warning("Color action payload is missing a valid 'color' value")
         return
 
+    _record_hotkey(action_id=ACTION_COLOR, color_name=candidate, hotkey=hotkey)
     _set_color_named(candidate)
