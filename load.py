@@ -211,6 +211,7 @@ def _register_hotkey_actions() -> None:
                 "required": ["color"],
             },
             thread_policy="main",
+            cardinality="multi",
         ),
     ]
 
