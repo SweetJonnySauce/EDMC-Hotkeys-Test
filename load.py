@@ -1,12 +1,12 @@
-"""Minimal EDMC test plugin for EDMC-Hotkeys action registration."""
+"""Minimal EDMC test plugin for EDMCHotkeys action registration."""
 
 from __future__ import annotations
 
-import importlib
 import logging
 import os
 import tkinter as tk
 import tkinter.ttk as ttk
+from types import SimpleNamespace
 from typing import Any, Optional
 
 
@@ -68,7 +68,7 @@ def plugin_app(parent: tk.Widget) -> tk.Frame:
     frame.columnconfigure(0, weight=1)
     frame.columnconfigure(1, weight=1)
 
-    ttk.Label(frame, text="EDMC-Hotkeys Test").grid(row=0, column=0, sticky="w", padx=6, pady=(4, 2))
+    ttk.Label(frame, text="EDMCHotkeys Test").grid(row=0, column=0, sticky="w", padx=6, pady=(4, 2))
 
     power_button = tk.Button(frame, width=14, command=_manual_toggle_power)
     power_button.grid(row=1, column=0, sticky="w", padx=6, pady=2)
@@ -79,7 +79,7 @@ def plugin_app(parent: tk.Widget) -> tk.Frame:
     color_block = tk.Label(frame, text="", width=16, height=2, relief=tk.SUNKEN, bd=1)
     color_block.grid(row=3, column=0, sticky="w", padx=6, pady=(4, 6))
 
-    legend_var = tk.StringVar(value="Bindings in EDMC-Hotkeys:\nUnconfirmed")
+    legend_var = tk.StringVar(value="Bindings in EDMCHotkeys:\nUnconfirmed")
     ttk.Label(frame, textvariable=legend_var, justify=tk.LEFT).grid(
         row=1, column=1, rowspan=3, sticky="nw", padx=(16, 6), pady=2
     )
@@ -179,10 +179,16 @@ def _ensure_hotkeys_api() -> Optional[Any]:
     if _hotkeys_api is not None:
         return _hotkeys_api
     try:
-        _hotkeys_api = importlib.import_module("EDMC-Hotkeys.load")
+        from EDMCHotkeys import Action, get_action, list_bindings, register_action
     except Exception as exc:
-        logger.debug("Could not import EDMC-Hotkeys.load", exc_info=exc)
+        logger.debug("Could not import EDMCHotkeys", exc_info=exc)
         return None
+    _hotkeys_api = SimpleNamespace(
+        Action=Action,
+        get_action=get_action,
+        list_bindings=list_bindings,
+        register_action=register_action,
+    )
     return _hotkeys_api
 
 
@@ -193,7 +199,7 @@ def _register_hotkey_actions() -> None:
 
     action_type = getattr(hotkeys_api, "Action", None)
     if action_type is None:
-        logger.warning("EDMC-Hotkeys API does not expose Action")
+        logger.warning("EDMCHotkeys API does not expose Action")
         return
 
     actions = [
@@ -251,7 +257,7 @@ def _refresh_hotkeys_from_api() -> None:
     if not isinstance(bindings, list):
         return
 
-    lines = ["Bindings in EDMC-Hotkeys:"]
+    lines = ["Bindings in EDMCHotkeys:"]
     for binding in bindings:
         action_id = _binding_field(binding, "action_id", "")
         hotkey = _binding_field(binding, "hotkey", "")

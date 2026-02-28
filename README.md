@@ -1,12 +1,12 @@
 # EDMC-Hotkeys-Test
 
-Small EDMC UI plugin used to validate `EDMC-Hotkeys` action registration, callback dispatch, and binding assignment display.
+Small EDMC UI plugin used to validate `EDMCHotkeys` action registration, callback dispatch, and binding assignment display.
 
-## Compatibility Note (EDMC-Hotkeys v3)
+## Compatibility Note (EDMCHotkeys v3)
 
-This plugin is compatible with the latest `EDMC-Hotkeys` behavior:
+This plugin is compatible with the latest `EDMCHotkeys` behavior:
 
-- Registers actions via `importlib.import_module("EDMC-Hotkeys.load")` and `register_action(...)`.
+- Registers actions via `from EDMCHotkeys import Action, get_action, list_bindings, register_action`.
 - Uses namespaced stable action IDs:
   - `hotkeys_test.on`
   - `hotkeys_test.off`
@@ -77,10 +77,10 @@ This plugin is compatible with the latest `EDMC-Hotkeys` behavior:
 
 ## Manual Verification Checklist
 
-1. Start EDMC with both `EDMC-Hotkeys` and `EDMC-Hotkeys-Test` enabled.
+1. Start EDMC with both `EDMCHotkeys` and `EDMC-Hotkeys-Test` enabled.
 2. Open the `EDMC-Hotkeys-Test` panel.
 3. Confirm actions register:
-   - Check EDMC log for lines like `Registered action 'hotkeys_test.on' with EDMC-Hotkeys`.
+   - Check EDMC log for lines like `Registered action 'hotkeys_test.on' with EDMCHotkeys`.
 4. Confirm assigned hotkeys load from API at startup (`list_bindings("EDMC-Hotkeys-Test")`):
    - Legend should show resolved hotkeys instead of `Unconfirmed` for configured bindings.
    - If you use the sample rows above, confirm entries for `test_on`, `test_off`, `test_toggle`, and `test_color_red` appear with expected pretty hotkey strings.
@@ -90,7 +90,7 @@ This plugin is compatible with the latest `EDMC-Hotkeys` behavior:
    - Trigger a color binding (`hotkeys_test.color`) with payload `{"color": "..."}`.
    - Verify color block updates to the payload color.
 7. Confirm bindings changes are reflected:
-   - Change a binding in EDMC-Hotkeys preferences, save, then click `Refresh Hotkeys`.
+   - Change a binding in EDMCHotkeys preferences, save, then click `Refresh Hotkeys`.
    - Verify the legend updates to the new pretty hotkey string for the affected action.
 8. Confirm independent control behavior:
    - `hotkeys_test.on/off` only changes the on/off button.
