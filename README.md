@@ -7,6 +7,9 @@ This plugin exists to verify:
 - Callback dispatch (including `source`, `hotkey`, and `payload`)
 - Binding lookup/rendering with `list_bindings(plugin_name="EDMC-Hotkeys-Test")`
 
+## Installation
+- Download zip file and extract into EDMC Plugin directory
+
 ## How It Works
 
 ### Plugin lifecycle
