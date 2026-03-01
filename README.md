@@ -1,6 +1,6 @@
 # EDMC-Hotkeys-Test
 
-UI test plugin for validating `EDMCHotkeys` integration inside EDMC.
+UI test plugin for validating [`EDMCHotkeys`](https://github.com/SweetJonnySauce/EDMCHotkeys) integration inside EDMC.
 
 This plugin exists to verify:
 - Action registration with `EDMCHotkeys`
