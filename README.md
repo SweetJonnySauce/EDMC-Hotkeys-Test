@@ -1,97 +1,97 @@
 # EDMC-Hotkeys-Test
 
-Small EDMC UI plugin used to validate `EDMCHotkeys` action registration, callback dispatch, and binding assignment display.
+UI test plugin for validating `EDMCHotkeys` integration inside EDMC.
 
-## Compatibility Note (EDMCHotkeys v3)
+This plugin exists to verify:
+- Action registration with `EDMCHotkeys`
+- Callback dispatch (including `source`, `hotkey`, and `payload`)
+- Binding lookup/rendering with `list_bindings(plugin_name="EDMC-Hotkeys-Test")`
 
-This plugin is compatible with the latest `EDMCHotkeys` behavior:
+## How It Works
 
-- Registers actions via `from EDMCHotkeys import Action, get_action, list_bindings, register_action`.
-- Uses namespaced stable action IDs:
-  - `hotkeys_test.on`
-  - `hotkeys_test.off`
-  - `hotkeys_test.toggle`
-  - `hotkeys_test.color`
-- Reads assigned bindings via `list_bindings(plugin_name="EDMC-Hotkeys-Test")`.
-- Uses the callback signature `(*, payload=None, source="hotkey", hotkey=None)`.
-- Expects `Binding.hotkey` as pretty display text (for example `CtrlL+ShiftR+F1`).
-- Uses bindings schema v3 (`version: 3`) where each row includes required `plugin`.
-- Requires canonical side-specific modifiers only:
-  - `ctrl_l`, `ctrl_r`, `alt_l`, `alt_r`, `shift_l`, `shift_r`, `win_l`, `win_r`
-  - Generic `ctrl`/`alt`/`shift` are invalid in saved bindings.
+### Plugin lifecycle
+- `plugin_start3(...)` registers actions as soon as the plugin loads.
+- `plugin_app(...)` builds the test UI, reapplies current state, re-registers actions, and refreshes binding legend text.
+- `journal_entry(...)` and `dashboard_entry(...)` call registration again as a load-order safety net.
+- `prefs_changed(...)` refreshes the legend from current bindings.
+- `plugin_stop()` clears cached API references and UI pointers.
 
-## Canonical v3 Binding Examples
+### Registered actions
+The plugin registers 4 actions with `thread_policy="main"`:
+- `On` (`Turn On`) -> sets power state to ON
+- `Off` (`Turn Off`) -> sets power state to OFF
+- `Toggle` (`Toggle`) -> flips toggle state
+- `Color` (`Set Color`) -> sets color block from payload
 
-`hotkeys_test.on`
+`Color` is registered with:
+- `cardinality="multi"` This allows for multiple hotkey bindings
+- `params_schema` requiring `{ "color": "<string>" }`
+
+### Callback signature and behavior
+Each callback uses:
+
+```python
+(*, payload=None, source="hotkey", hotkey=None)
+```
+
+Behavior:
+- Logs action with source/hotkey context.
+- `On` and `Off` only affect the power button.
+- `Toggle` only affects the toggle button.
+- `Color` requires `payload.color`; invalid/missing values log warnings.
+
+## UI Behavior
+
+The plugin panel includes:
+- `ON/OFF` button (manual test control)
+- `Toggle ON/OFF` button (manual test control)
+- Color preview block
+- Binding legend text area
+
+Legend behavior:
+- Starts as `Bindings in EDMCHotkeys:\nUnconfirmed`
+- Refreshes from `list_bindings(plugin_name="EDMC-Hotkeys-Test")`
+- Shows only bindings that have `action_id`, `hotkey`, and `enabled=true`
+- For `Color`, legend shows payload detail like `Color(red)`
+- Refreshes on panel load, prefs save, and main-window focus-in
+
+## Binding Format (v3)
+
+The sample `bindings.json` in this repo uses schema `version: 3` and plugin name `EDMC-Hotkeys-Test`. This is only for reference and is not needed for this plugin or for `EDMCHotkeys`
+
+Example rows:
 
 ```json
 {
-  "id": "test_on",
+  "id": "hotkeys_test_on",
   "plugin": "EDMC-Hotkeys-Test",
   "modifiers": ["ctrl_l", "shift_l"],
   "key": "f1",
-  "action_id": "hotkeys_test.on",
+  "action_id": "On",
   "enabled": true
 }
 ```
 
-`hotkeys_test.off`
-
 ```json
 {
-  "id": "test_off",
-  "plugin": "EDMC-Hotkeys-Test",
-  "modifiers": ["ctrl_l", "shift_l"],
-  "key": "f2",
-  "action_id": "hotkeys_test.off",
-  "enabled": true
-}
-```
-
-`hotkeys_test.toggle`
-
-```json
-{
-  "id": "test_toggle",
-  "plugin": "EDMC-Hotkeys-Test",
-  "modifiers": ["ctrl_l", "shift_l"],
-  "key": "f3",
-  "action_id": "hotkeys_test.toggle",
-  "enabled": true
-}
-```
-
-`hotkeys_test.color` (red payload)
-
-```json
-{
-  "id": "test_color_red",
+  "id": "hotkeys_test_color_red",
   "plugin": "EDMC-Hotkeys-Test",
   "modifiers": ["ctrl_l", "shift_l"],
   "key": "f4",
-  "action_id": "hotkeys_test.color",
-  "payload": {"color": "red"},
-  "enabled": true
+  "action_id": "Color",
+  "enabled": true,
+  "payload": {
+    "color": "red"
+  }
 }
 ```
 
-## Manual Verification Checklist
+## Quick Manual Verification
 
-1. Start EDMC with both `EDMCHotkeys` and `EDMC-Hotkeys-Test` enabled.
+1. Enable both `EDMCHotkeys` and `EDMC-Hotkeys-Test` in EDMC.
 2. Open the `EDMC-Hotkeys-Test` panel.
-3. Confirm actions register:
-   - Check EDMC log for lines like `Registered action 'hotkeys_test.on' with EDMCHotkeys`.
-4. Confirm assigned hotkeys load from API at startup (`list_bindings("EDMC-Hotkeys-Test")`):
-   - Legend should show resolved hotkeys instead of `Unconfirmed` for configured bindings.
-   - If you use the sample rows above, confirm entries for `test_on`, `test_off`, `test_toggle`, and `test_color_red` appear with expected pretty hotkey strings.
-5. Confirm callback hotkey/source forwarding:
-   - Trigger a binding and verify logs include `source` and `hotkey` in action callback log messages.
-6. Confirm payload color handling:
-   - Trigger a color binding (`hotkeys_test.color`) with payload `{"color": "..."}`.
-   - Verify color block updates to the payload color.
-7. Confirm bindings changes are reflected:
-   - Change a binding in EDMCHotkeys preferences, save, then click `Refresh Hotkeys`.
-   - Verify the legend updates to the new pretty hotkey string for the affected action.
-8. Confirm independent control behavior:
-   - `hotkeys_test.on/off` only changes the on/off button.
-   - `hotkeys_test.toggle` only changes the toggle button.
+3. Confirm log lines like `Registered action 'On'`, `Registered action 'Off'`, `Registered action 'Toggle'`, `Registered action 'Color'`.
+4. Press configured hotkeys and verify:
+   - Buttons/color update as expected.
+   - Logs include `source` and `hotkey`.
+5. Change bindings in `EDMCHotkeys`, save prefs, and verify legend updates.
